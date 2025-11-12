@@ -11,11 +11,45 @@ const getQuestions = asyncHandler(async (req, res) => {
   res.json(questions);
 });
 
+// @desc    Get all unique question categories
+// @route   GET /api/questions/categories
+// @access  Private/Admin (only admins need to see this list for the form)
+const getQuestionCategories = asyncHandler(async (req, res) => {
+  // Use MongoDB aggregation to find all distinct category values
+  const categories = await Question.aggregate([
+    { 
+      // 1. Group all documents by the 'category' field
+      $group: {
+        _id: '$category', // Grouping key is the category value
+      }
+    },
+    {
+      // 2. Optionally, project/rename the output field and sort it alphabetically
+      $project: {
+        _id: 0, // Exclude the default _id field
+        category: '$_id', // Rename the grouped field to 'category'
+      }
+    },
+    {
+      // 3. Sort the results alphabetically
+      $sort: {
+        category: 1
+      }
+    }
+  ]);
+
+  // The result is an array of objects like: [{ category: 'Verbal' }, { category: 'Numerical' }]
+  // We can map it to an array of strings for simplicity on the frontend: ['Verbal', 'Numerical']
+  const categoryNames = categories.map(item => item.category);
+  
+  res.json(categoryNames);
+});
+
 // @desc    Create a new question (Admin function)
 // @route   POST /api/questions
 // @access  Private/Admin
 const createQuestion = asyncHandler(async (req, res) => {
-  const { text, imageUrl, options, correctAnswerIndex, difficulty } = req.body;
+  const { text, imageUrl, options, correctAnswerIndex, difficulty, category } = req.body;
 
   // Simple validation to ensure the correct answer index is valid for the options provided
   if (correctAnswerIndex === undefined || correctAnswerIndex >= options.length) {
@@ -30,6 +64,7 @@ const createQuestion = asyncHandler(async (req, res) => {
     options: options.map(opt => ({ text: opt.text || opt })), // Map options to match the optionSchema
     correctAnswerIndex,
     difficulty,
+    category,
   });
 
   const createdQuestion = await question.save();
@@ -40,7 +75,7 @@ const createQuestion = asyncHandler(async (req, res) => {
 // @route   PUT /api/questions/:id
 // @access  Private/Admin
 const updateQuestion = asyncHandler(async (req, res) => {
-  const { text, imageUrl, options, correctAnswerIndex, difficulty } = req.body;
+  const { text, imageUrl, options, correctAnswerIndex, difficulty, category } = req.body;
 
   const question = await Question.findById(req.params.id);
 
@@ -48,7 +83,8 @@ const updateQuestion = asyncHandler(async (req, res) => {
     question.text = text || question.text;
     question.imageUrl = imageUrl ?? question.imageUrl; // Use nullish coalescing for optional fields
     question.difficulty = difficulty || question.difficulty;
-    
+    question.category = category || question.category;
+
     // Update options and validate index if options are provided
     if (options && options.length >= 2) {
       if (correctAnswerIndex === undefined || correctAnswerIndex >= options.length) {
@@ -225,4 +261,4 @@ const submitTest = asyncHandler(async (req, res) => {
   });
 });
 
-export { getQuestions, createQuestion, updateQuestion, deleteQuestion, getTestQuestions, submitTest };
+export { getQuestions, createQuestion, updateQuestion, deleteQuestion, getTestQuestions, submitTest, getQuestionCategories};

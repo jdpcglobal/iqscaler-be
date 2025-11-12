@@ -39,6 +39,12 @@ const questionSchema = mongoose.Schema(
       required: true,
       min: 0,
     },
+    // A category for the question (e.g., 'Verbal Reasoning', 'Numerical Puzzles')
+    category: {
+        type: String,
+        required: true, // Making category mandatory for better organization
+        trim: true,
+    },
     // A difficulty level (optional, useful for test settings management later)
     difficulty: {
       type: String,
