@@ -1,6 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import Result from '../models/resultModel.js';
-import puppeteer from 'puppeteer'
+import puppeteer from 'puppeteer-core' ;
+import chromium from '@sparticuz/chromium';
 // ... other imports
 
 // Function to safely fetch result and handle permissions
@@ -291,23 +292,23 @@ export const generateCertificate = asyncHandler(async (req, res) => {
 
     let browser;
     try{
-        const executablePath = puppeteer.executablePath();
+        // Use the optimized Chromium executable path
+        const executablePath = await chromium.executablePath(); 
+
         browser = await puppeteer.launch({
-        executablePath: executablePath || undefined, // undefined lets puppeteer fallback if needed
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        headless: true
-         });
-//  ({ 
-//         args: ['--no-sandbox', '--disable-setuid-sandbox'],
-//         // Use headless: 'new' or headless: true depending on your puppeteer version
-//         headless: true 
-//     });
-        }
+            args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: executablePath, // Pass the executable path from chromium library
+            headless: chromium.headless,
+        });
+
+    }
     catch(error){
         console.error('Certificate generation failed:', {
             msg: error.message,
             stack: error.stack
         });
+        // Important: This error status (500) is what you need to check in your server logs!
         return res.status(500).json({ message: 'Failed to generate certificate. See server logs.' });
     }
   
