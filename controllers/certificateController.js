@@ -28,10 +28,8 @@ const getResultForCertificate = async (resultId, userId) => {
     return result;
 };
 
-// --- NEW HELPER FUNCTION: Generates the PDF using PDFKit ---
 const generatePdfKitCertificate = (result) => {
     return new Promise((resolve) => {
-        // Create a buffer stream to capture the PDF output
         const buffers = [];
         const writableStream = new Writable({
             write(chunk, encoding, callback) {
@@ -50,13 +48,13 @@ const generatePdfKitCertificate = (result) => {
         // ----------------------------------------------------
         const doc = new PDFDocument({
             size: 'A4',
-            layout: 'landscape', // 297mm x 210mm
+            layout: 'landscape', // 297mm x 210mm (approx 841.89pt x 595.28pt)
             margin: 0
         });
 
         doc.pipe(writableStream);
 
-        // Calculate data
+        // --- Data Prep ---
         const scorePercentage = result.questionsAttempted > 0 
             ? ((result.correctAnswers / result.questionsAttempted) * 100).toFixed(1) 
             : 0;
@@ -64,55 +62,52 @@ const generatePdfKitCertificate = (result) => {
         const testDate = result.createdAt.toLocaleDateString('en-GB');
         const certificateNumber = result._id.toString().slice(-8);
         
-        // Define key measurements based on A4 landscape (approx. 842pt wide, 595pt high)
-        const pageWidth = 842;
-        const pageHeight = 595;
+        // --- Measurements ---
+        const pageWidth = doc.page.width;  // approx 842
+        const pageHeight = doc.page.height; // approx 595
+        const centerX = pageWidth / 2;
         const borderMargin = 40;
-        const contentWidth = pageWidth - (2 * borderMargin);
         
         // --- 1. Decorative Border ---
-        doc.rect(borderMargin, borderMargin, contentWidth, pageHeight - (2 * borderMargin))
+        doc.rect(borderMargin, borderMargin, pageWidth - (2 * borderMargin), pageHeight - (2 * borderMargin))
            .lineWidth(10)
-           .stroke('#0056b3'); // Blue border
+           .stroke('#0056b3');
 
-        // --- 2. Watermark (Text placed in the center and rotated) ---
-        // Save the current state
+        // --- 2. Watermark ---
         doc.save(); 
-        
         doc.fillColor('#ccc')
            .opacity(0.1)
            .fontSize(150)
-           .text('IQ Pro', 
-                pageWidth / 2, 
-                pageHeight / 2, 
-                {
-                    align: 'center', 
-                    valign: 'center',
-                    rotate: -35, // Rotate by -35 degrees
-                    width: pageWidth,
-                    height: pageHeight
-                }
-            );
-
-        // Restore the state so subsequent fills/rotations are normal
+           .text('IQ-Scaler', 0, 0, { // Start at 0,0 and use width/height to center
+               align: 'center', 
+               valign: 'center',
+               width: pageWidth,
+               height: pageHeight,
+               rotate: -35 // Note: PDFKit rotation usually requires translation to center context first for perfect center rotation, but this approximation often works for watermarks.
+           });
         doc.restore(); 
-        doc.opacity(1); // Reset opacity for main content
-        
+        doc.opacity(1); 
+
         // --- 3. Header ---
         let currentY = 80;
+
+        // Title
         doc.fillColor('#0056b3')
            .fontSize(36)
            .font('Helvetica-Bold')
            .text('IQ PRO', 0, currentY, { align: 'center', width: pageWidth });
         
-        currentY += 40;
+        currentY += 50;
         
+        // Yellow Ribbon (Centered manually)
+        const ribbonWidth = 300;
         doc.fillColor('#ffc107')
-           .rect(pageWidth / 2 - 150, currentY, 300, 5) // Yellow Ribbon
+           .rect(centerX - (ribbonWidth / 2), currentY, ribbonWidth, 5)
            .fill();
         
         currentY += 25;
 
+        // Subtitle
         doc.fillColor('#555')
            .fontSize(18)
            .font('Helvetica')
@@ -125,16 +120,19 @@ const generatePdfKitCertificate = (result) => {
            .fontSize(16)
            .text('This certifies that', 0, currentY, { align: 'center', width: pageWidth });
            
-        currentY += 30;
+        currentY += 40;
 
+        // User Name
         doc.fillColor('#dc3545')
            .fontSize(30)
            .font('Helvetica-Bold')
            .text(userName, 0, currentY, { align: 'center', width: pageWidth });
         
-        // Manual underline (PDFKit doesn't do complex CSS underlines)
-        doc.moveTo(pageWidth / 2 - (userName.length * 7), currentY + 32) 
-           .lineTo(pageWidth / 2 + (userName.length * 7), currentY + 32)
+        // Dynamic Underline (Calculates actual text width)
+        const nameWidth = doc.widthOfString(userName);
+        const lineY = currentY + 35;
+        doc.moveTo(centerX - (nameWidth / 2), lineY) 
+           .lineTo(centerX + (nameWidth / 2), lineY)
            .lineWidth(1)
            .stroke('#dc3545');
 
@@ -147,57 +145,77 @@ const generatePdfKitCertificate = (result) => {
            
         currentY += 40;
         
+        // Score
         doc.fillColor('#28a745')
            .fontSize(48)
-           .font('Times-Bold') // Using a built-in serif font for contrast
+           .font('Times-Bold')
            .text(`${scorePercentage}%`, 0, currentY, { align: 'center', width: pageWidth });
 
         // --- 5. Footer (Signatures and Info) ---
-        const footerY = pageHeight - 120;
-        const columnX1 = borderMargin + 50; // Left column X
-        const columnX2 = pageWidth / 2;     // Center column X
-        const columnX3 = pageWidth - borderMargin - 50; // Right column X
+        // Moved up slightly to avoid bottom edge clipping
+        const footerY = pageHeight - 100; 
+        
+        // Define Column Anchors
+        const leftColX = borderMargin + 40;
+        // CenterColX is centerX
+        const rightColX = pageWidth - borderMargin - 100;
 
-        // Left Column: Date / Cert No
+        // -- Left Column: Details --
         doc.fillColor('#555')
            .fontSize(10)
            .font('Helvetica')
-           .text(`Certificate No: ${certificateNumber}`, columnX1, footerY - 10, { align: 'left' });
+           .text(`Certificate No: ${certificateNumber}`, leftColX, footerY - 15, { align: 'left' });
         
-        doc.moveTo(columnX1, footerY + 10)
-           .lineTo(columnX1 + 150, footerY + 10)
+        // Date Line
+        doc.moveTo(leftColX, footerY + 5)
+           .lineTo(leftColX + 150, footerY + 5)
            .lineWidth(1)
            .stroke('#555');
 
         doc.fontSize(12)
-           .text(`Date of Completion: ${testDate}`, columnX1, footerY + 15, { align: 'left' });
+           .text(`Date: ${testDate}`, leftColX, footerY + 10, { align: 'left' });
 
 
-        // Center Column: Signature
-        // NOTE: Drawing the Base64 SVG is complex/not supported. We'll simulate a signature line.
-        doc.fillColor('#555')
-           .moveTo(columnX2 - 75, footerY + 10) // 150 wide line
-           .lineTo(columnX2 + 75, footerY + 10)
+        // -- Center Column: Signature --
+        const signLineWidth = 200;
+        
+        // Draw Line centered at Page Center
+        doc.moveTo(centerX - (signLineWidth / 2), footerY + 5) 
+           .lineTo(centerX + (signLineWidth / 2), footerY + 5)
            .lineWidth(1)
            .stroke('#555');
            
+        // Label centered under the line
+        // IMPORTANT: To center text at a specific X, we set the X to (Center - Width/2)
         doc.fontSize(12)
-           .text('Administrator Signature', columnX2, footerY + 15, { align: 'center', width: 150 });
+           .text('Administrator Signature', centerX - (signLineWidth / 2), footerY + 10, { 
+               align: 'center', 
+               width: signLineWidth 
+           });
         
-        // Right Column: Seal
-        // Draw a circle for the seal
-        doc.save(); // Save state before color/opacity change
+
+        // -- Right Column: Seal --
+        const sealRadius = 40;
+        const sealCenterX = rightColX + 30;
+        const sealCenterY = footerY + 10;
+
+        doc.save(); 
         doc.fillColor('#dc3545')
            .opacity(0.9)
-           .circle(columnX3 - 50, footerY + 45, 40) // Positioned slightly lower for effect
+           .circle(sealCenterX, sealCenterY, sealRadius)
            .fill();
         
+        // Centering text inside the circle
         doc.fillColor('white')
            .fontSize(10)
-           .text('SEALED', columnX3 - 80, footerY + 40, { align: 'center', width: 60 });
+           .font('Helvetica-Bold')
+           .text('SEALED', sealCenterX - sealRadius, sealCenterY - 5, { 
+               align: 'center', 
+               width: sealRadius * 2 
+           });
         doc.restore(); 
 
-        doc.end(); // Finalize the PDF document
+        doc.end(); 
     });
 };
 
