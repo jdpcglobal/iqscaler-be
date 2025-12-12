@@ -289,11 +289,28 @@ export const generateCertificate = asyncHandler(async (req, res) => {
     
     const htmlContent = generateCertificateHtml(result);
 
-    const browser = await puppeteer.launch({ 
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        // Use headless: 'new' or headless: true depending on your puppeteer version
-        headless: true 
-    });
+    let browser;
+    try{
+        const executablePath = puppeteer.executablePath();
+        browser = await puppeteer.launch({
+        executablePath: executablePath || undefined, // undefined lets puppeteer fallback if needed
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        headless: true
+         });
+//  ({ 
+//         args: ['--no-sandbox', '--disable-setuid-sandbox'],
+//         // Use headless: 'new' or headless: true depending on your puppeteer version
+//         headless: true 
+//     });
+        }
+    catch(error){
+        console.error('Certificate generation failed:', {
+            msg: error.message,
+            stack: error.stack
+        });
+        return res.status(500).json({ message: 'Failed to generate certificate. See server logs.' });
+    }
+  
     const page = await browser.newPage();
     
     await page.setContent(htmlContent, {
