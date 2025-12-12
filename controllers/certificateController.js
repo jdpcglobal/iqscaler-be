@@ -292,23 +292,31 @@ export const generateCertificate = asyncHandler(async (req, res) => {
 
     let browser;
     try{
-        // Use the optimized Chromium executable path
+        // 1. Get the path to the slim Chromium binary
         const executablePath = await chromium.executablePath(); 
 
+        // 2. Launch Puppeteer-Core using the slim binary path and recommended arguments
         browser = await puppeteer.launch({
+            // Ensure no-sandbox and other required args are passed
             args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-            defaultViewport: chromium.defaultViewport,
-            executablePath: executablePath, // Pass the executable path from chromium library
-            headless: chromium.headless,
+            
+            // Pass the executable path from the optimized chromium library
+            executablePath: executablePath, 
+            
+            // Force the correct headless mode for the environment
+            headless: chromium.headless, 
+            
+            // Setting a custom viewport is optional but can sometimes help stability
+            defaultViewport: chromium.defaultViewport || { width: 1200, height: 800 }, 
         });
 
     }
     catch(error){
+        // ... (error handling remains the same)
         console.error('Certificate generation failed:', {
             msg: error.message,
             stack: error.stack
         });
-        // Important: This error status (500) is what you need to check in your server logs!
         return res.status(500).json({ message: 'Failed to generate certificate. See server logs.' });
     }
   
