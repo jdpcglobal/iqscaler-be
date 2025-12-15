@@ -48,7 +48,7 @@ const generatePdfKitCertificate = (result) => {
         // ----------------------------------------------------
         const doc = new PDFDocument({
             size: 'A4',
-            layout: 'landscape', // 297mm x 210mm (approx 841.89pt x 595.28pt)
+            layout: 'landscape',
             margin: 0
         });
 
@@ -63,43 +63,62 @@ const generatePdfKitCertificate = (result) => {
         const certificateNumber = result._id.toString().slice(-8);
         
         // --- Measurements ---
-        const pageWidth = doc.page.width;  // approx 842
-        const pageHeight = doc.page.height; // approx 595
+        const pageWidth = doc.page.width; 
+        const pageHeight = doc.page.height; 
         const centerX = pageWidth / 2;
+        const centerY = pageHeight / 2;
         const borderMargin = 40;
+        const contentWidth = pageWidth - (2 * borderMargin);
+        const contentHeight = pageHeight - (2 * borderMargin);
         
         // --- 1. Decorative Border ---
-        doc.rect(borderMargin, borderMargin, pageWidth - (2 * borderMargin), pageHeight - (2 * borderMargin))
+        doc.rect(borderMargin, borderMargin, contentWidth, contentHeight)
            .lineWidth(10)
            .stroke('#0056b3');
 
-        // --- 2. Watermark ---
+        // --- 2. Watermark (Fixed Alignment) ---
+        // Calculate the angle to span bottom-left to top-right
+        // Math.atan2(height, width) gives the angle in radians. 
+        // We convert to degrees. Negative because PDF coordinate system (Y goes down).
+        const angleRadians = Math.atan2(contentHeight, contentWidth);
+        const angleDegrees = -1 * (angleRadians * 180 / Math.PI);
+
         doc.save(); 
+        
+        // Move the "pen" to the exact center of the page
+        doc.translate(centerX, centerY);
+        
+        // Rotate the entire context by the calculated diagonal angle
+        doc.rotate(angleDegrees);
+        
         doc.fillColor('#ccc')
-           .opacity(0.1)
-           .fontSize(150)
-           .text('IQ-Scaler', 0, 0, { // Start at 0,0 and use width/height to center
+           .opacity(0.1) // Low opacity
+           .fontSize(120) // Large font
+           .text('IQ-Scaler', 0, 0, { // Draw at (0,0) relative to the translated center
                align: 'center', 
                valign: 'center',
-               width: pageWidth,
-               height: pageHeight,
-               rotate: -35 // Note: PDFKit rotation usually requires translation to center context first for perfect center rotation, but this approximation often works for watermarks.
+               // By default text starts at 0,0. To center it on the rotation point,
+               // we usually rely on alignment or manual offset. 
+               // PDFKit's 'center' aligns text horizontally. 
+               // We offset Y by half the font size to center vertically.
+               baseline: 'middle'
            });
-        doc.restore(); 
+           
+        doc.restore(); // Restore to normal (0 rotation, top-left origin)
         doc.opacity(1); 
 
         // --- 3. Header ---
         let currentY = 80;
 
-        // Title
+        // Title (UPDATED to IQ Scaler)
         doc.fillColor('#0056b3')
            .fontSize(36)
            .font('Helvetica-Bold')
-           .text('IQ PRO', 0, currentY, { align: 'center', width: pageWidth });
+           .text('IQ Scaler', 0, currentY, { align: 'center', width: pageWidth });
         
         currentY += 50;
         
-        // Yellow Ribbon (Centered manually)
+        // Yellow Ribbon
         const ribbonWidth = 300;
         doc.fillColor('#ffc107')
            .rect(centerX - (ribbonWidth / 2), currentY, ribbonWidth, 5)
@@ -128,7 +147,7 @@ const generatePdfKitCertificate = (result) => {
            .font('Helvetica-Bold')
            .text(userName, 0, currentY, { align: 'center', width: pageWidth });
         
-        // Dynamic Underline (Calculates actual text width)
+        // Dynamic Underline
         const nameWidth = doc.widthOfString(userName);
         const lineY = currentY + 35;
         doc.moveTo(centerX - (nameWidth / 2), lineY) 
@@ -151,13 +170,9 @@ const generatePdfKitCertificate = (result) => {
            .font('Times-Bold')
            .text(`${scorePercentage}%`, 0, currentY, { align: 'center', width: pageWidth });
 
-        // --- 5. Footer (Signatures and Info) ---
-        // Moved up slightly to avoid bottom edge clipping
+        // --- 5. Footer ---
         const footerY = pageHeight - 100; 
-        
-        // Define Column Anchors
         const leftColX = borderMargin + 40;
-        // CenterColX is centerX
         const rightColX = pageWidth - borderMargin - 100;
 
         // -- Left Column: Details --
@@ -166,7 +181,6 @@ const generatePdfKitCertificate = (result) => {
            .font('Helvetica')
            .text(`Certificate No: ${certificateNumber}`, leftColX, footerY - 15, { align: 'left' });
         
-        // Date Line
         doc.moveTo(leftColX, footerY + 5)
            .lineTo(leftColX + 150, footerY + 5)
            .lineWidth(1)
@@ -176,17 +190,15 @@ const generatePdfKitCertificate = (result) => {
            .text(`Date: ${testDate}`, leftColX, footerY + 10, { align: 'left' });
 
 
-        // -- Center Column: Signature --
+        // -- Center Column: Signature Placeholder --
+        // (Leaving this as text for now as requested)
         const signLineWidth = 200;
         
-        // Draw Line centered at Page Center
         doc.moveTo(centerX - (signLineWidth / 2), footerY + 5) 
            .lineTo(centerX + (signLineWidth / 2), footerY + 5)
            .lineWidth(1)
            .stroke('#555');
            
-        // Label centered under the line
-        // IMPORTANT: To center text at a specific X, we set the X to (Center - Width/2)
         doc.fontSize(12)
            .text('Administrator Signature', centerX - (signLineWidth / 2), footerY + 10, { 
                align: 'center', 
@@ -205,7 +217,6 @@ const generatePdfKitCertificate = (result) => {
            .circle(sealCenterX, sealCenterY, sealRadius)
            .fill();
         
-        // Centering text inside the circle
         doc.fillColor('white')
            .fontSize(10)
            .font('Helvetica-Bold')
