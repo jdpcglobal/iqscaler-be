@@ -236,7 +236,8 @@ export const generateCertificate = asyncHandler(async (req, res) => {
         // NOTE: Replace 'process.env.FRONTEND_URL' with your actual environment variable if you have one.
         // Otherwise this defaults to the request host (good for simple setups).
         const baseUrl = process.env.FRONTEND_URL || `${req.protocol}://${req.get('host')}`;
-        const verificationUrl = `${baseUrl}/certificates/${resultId}?preview=true`; // Adjust route path as needed
+        const verificationUrl = `${baseUrl}/results/${resultId}`; // Adjust route path as needed
+
 
         pdfBuffer = await generatePdfKitCertificate(result, verificationUrl);
     } catch (error) {
