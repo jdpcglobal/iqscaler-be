@@ -19,9 +19,22 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const allowedOrigin = process.env.FRONTEND_URL;
+
+// Configure CORS
+const corsOptions = {
+    origin: allowedOrigin,
+    // Allows requests with credentials (needed for cookies, Authorization headers)
+    credentials: true, 
+    // Explicitly allow methods used by your app
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], 
+    // Explicitly allow headers used by your app (e.g., Authorization header)
+    allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
 // Middleware
 app.use(express.json()); // For parsing application/json
-app.use(cors()); // Enable CORS for all routes
+app.use(cors(corsOptions)); // Enable CORS for all routes
 
 // Basic route to test the server
 app.get('/', (req, res) => {
