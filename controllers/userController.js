@@ -1,3 +1,5 @@
+// server/controllers/userController.js
+
 import asyncHandler from 'express-async-handler';
 import jwt from 'jsonwebtoken';
 import User from '../models/userModel.js';
@@ -115,7 +117,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
     throw new Error('Email could not be sent. Try again later.');
   }
 });
-
 
 // @desc    Reset Password using Token
 // @route   PUT /api/users/resetpassword/:resettoken

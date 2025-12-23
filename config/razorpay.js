@@ -1,3 +1,5 @@
+// server/config/razorpay.js
+
 import Razorpay from 'razorpay';
 import dotenv from 'dotenv';
 dotenv.config();

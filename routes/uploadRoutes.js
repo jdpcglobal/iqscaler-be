@@ -1,3 +1,5 @@
+// server/routes/uploadRoutes.js
+
 import express from 'express';
 import { uploadImage } from '../config/cloudinaryConfig.js';
 import { protect, admin } from '../middleware/authMiddleware.js';

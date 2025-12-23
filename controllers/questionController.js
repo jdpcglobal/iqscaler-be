@@ -1,3 +1,5 @@
+// server/controllers/questionController.js
+
 import asyncHandler from 'express-async-handler';
 import Question from '../models/questionModel.js';
 import TestConfig from '../models/testConfigModel.js';

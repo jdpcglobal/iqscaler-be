@@ -1,3 +1,5 @@
+// server/controllers/configController.js
+
 import asyncHandler from 'express-async-handler';
 import TestConfig from '../models/testConfigModel.js';
 

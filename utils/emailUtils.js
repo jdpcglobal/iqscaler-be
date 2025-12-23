@@ -1,3 +1,4 @@
+// server/utils/emailUtils.js
 // Placeholder function to simulate sending an email during development
 const sendEmail = async (options) => {
   console.log('----------------------------------------------------');

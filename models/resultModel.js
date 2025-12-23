@@ -1,3 +1,5 @@
+// server/models/resultModel.js
+
 import mongoose from 'mongoose';
 
 const resultSchema = mongoose.Schema(

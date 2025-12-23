@@ -1,3 +1,5 @@
+// server/models/testConfigModel.js
+
 import mongoose from 'mongoose';
 
 const difficultyConfigSchema = mongoose.Schema({

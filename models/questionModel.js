@@ -1,3 +1,5 @@
+// server/models/questionModel.js
+
 import mongoose from 'mongoose';
 
 // Define the schema for a single answer option

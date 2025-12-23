@@ -1,3 +1,5 @@
+// server/routes/userRoutes.js
+
 import express from 'express';
 const router = express.Router();
 import { authUser, registerUser, forgotPassword, resetPassword, getUsers, deleteUser, getUserById, updateUser } from '../controllers/userController.js';

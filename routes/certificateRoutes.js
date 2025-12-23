@@ -1,4 +1,5 @@
 // server/routes/certificateRoutes.js
+
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
 // Import the new public controller function
@@ -13,17 +14,3 @@ router.route('/:id').get(protect, generateCertificate);
 router.route('/verify/:resultId').get(verifyCertificatePublic); // <-- NEW
 
 export default router;
-
-
-
-
-
-// import express from 'express';
-// import { protect } from '../middleware/authMiddleware.js';
-// import { generateCertificate } from '../controllers/certificateController.js';
-
-// const router = express.Router();
-
-// router.route('/:id').get(protect, generateCertificate);
-
-// export default router;

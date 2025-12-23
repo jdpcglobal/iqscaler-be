@@ -1,5 +1,6 @@
+// server/routes/questionRoutes.js
+
 import express from 'express';
-const router = express.Router();
 import {
   getQuestions,
   createQuestion,
@@ -10,6 +11,8 @@ import {
   getQuestionCategories, // <-- NEW IMPORT
 } from '../controllers/questionController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
+
+const router = express.Router();
 
 // Route for fetching randomized public test questions
 router.route('/test').get(getTestQuestions);
