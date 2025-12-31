@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/userModel.js';
 import crypto from 'crypto';
 import { sendEmail } from '../utils/emailUtils.js';
+import { OAuth2Client } from 'google-auth-library';
 
 // Helper function to generate a JWT
 const generateToken = (id) => {
@@ -13,6 +14,53 @@ const generateToken = (id) => {
     expiresIn: '30d', // Token expires in 30 days
   });
 };
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// @desc    Authenticate with Google
+// @route   POST /api/users/google
+// @access  Public
+const googleAuth = asyncHandler(async (req, res) => {
+  const { idToken } = req.body;
+
+  const ticket = await client.verifyIdToken({
+    idToken,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
+
+  const { name, email, sub: googleId } = ticket.getPayload();
+
+  // 1. Check if user exists
+  let user = await User.findOne({ email });
+
+  if (user) {
+    // If user exists but doesn't have googleId, link it
+    if (!user.googleId) {
+      user.googleId = googleId;
+      await user.save();
+    }
+  } else {
+    // 2. If user doesn't exist, create them
+    // Generating a unique username from the name
+    const baseUsername = name.replace(/\s+/g, '').toLowerCase();
+    const uniqueUsername = `${baseUsername}${Math.floor(1000 + Math.random() * 9000)}`;
+
+    user = await User.create({
+      username: uniqueUsername,
+      email,
+      googleId,
+      // No password needed because of our schema modification
+    });
+  }
+
+  res.json({
+    _id: user._id,
+    username: user.username,
+    email: user.email,
+    isAdmin: user.isAdmin,
+    token: generateToken(user._id),
+  });
+});
 
 // @desc    Register a new user
 // @route   POST /api/users
@@ -225,4 +273,4 @@ const updateUser = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, authUser, forgotPassword, resetPassword, getUsers, deleteUser, getUserById, updateUser };
+export { googleAuth,registerUser, authUser, forgotPassword, resetPassword, getUsers, deleteUser, getUserById, updateUser };

@@ -2,12 +2,13 @@
 
 import express from 'express';
 const router = express.Router();
-import { authUser, registerUser, forgotPassword, resetPassword, getUsers, deleteUser, getUserById, updateUser } from '../controllers/userController.js';
+import { googleAuth,authUser, registerUser, forgotPassword, resetPassword, getUsers, deleteUser, getUserById, updateUser } from '../controllers/userController.js';
 import { protect, admin } from '../middleware/authMiddleware.js'; // <-- NEW IMPORT
 
 // Public Routes
 router.route('/').post(registerUser);
 router.post('/login', authUser);
+router.post('/google', googleAuth);
 router.post('/forgotpassword', forgotPassword);
 router.put('/resetpassword/:resettoken', resetPassword);
 

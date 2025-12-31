@@ -98,31 +98,31 @@ const generatePdfKitCertificate = async (result, verificationUrl) => {
 
         currentY += 60;
         doc.fillColor('#444')
-            .fontSize(18)
+            .fontSize(24)
             .font('Helvetica')
             .text('This certifies that', 0, currentY, { align: 'center', width: pageWidth });
             
         currentY += 45;
         doc.fillColor('#0056b3')
-            .fontSize(44)
+            .fontSize(38)
             .font('Helvetica-Bold')
             .text(userName, 0, currentY, { align: 'center', width: pageWidth });
         
         currentY += 70;
         doc.fillColor('#444')
-            .fontSize(16)
+            .fontSize(24)
             .font('Helvetica')
             .text('has successfully completed the Intellectual Examination and is hereby awarded a score of:', 0, currentY, { align: 'center', width: pageWidth });
             
-        currentY += 45;
+        currentY += 70;
         doc.fillColor('#28a745')
-            .fontSize(50)
+            .fontSize(38)
             .font('Times-Bold')
             .text(`${scorePercentage}%`, 0, currentY, { align: 'center', width: pageWidth });
 
         currentY += 60;
         doc.fillColor('#555')
-            .fontSize(15)
+            .fontSize(20)
             .font('Helvetica-Oblique')
             .text(`Estimated IQ Range: ${iqRange}`, 0, currentY, { align: 'center', width: pageWidth });
 
@@ -131,14 +131,14 @@ const generatePdfKitCertificate = async (result, verificationUrl) => {
         const sideMargin = 80;
 
         // Metadata
-        doc.fillColor('#555').fontSize(10).font('Helvetica')
+        doc.fillColor('#555').fontSize(15).font('Helvetica')
             .text(`Certificate No: ${certificateNumber}`, sideMargin, footerY)
             .text(`Date: ${testDate}`, sideMargin, footerY + 15);
 
         // Website Logo (Center Bottom)
-        const logoSize = 65;
+        const logoSize = 80;
         try {
-            doc.image(logoImagePath, centerX - (logoSize / 2), footerY - 15, { width: logoSize });
+            doc.image(logoImagePath, centerX - (logoSize / 2), footerY - 30, { width: logoSize });
         } catch (err) {
             doc.fontSize(12).text('IQ SCALER', centerX - 40, footerY);
         }
@@ -146,10 +146,10 @@ const generatePdfKitCertificate = async (result, verificationUrl) => {
         // QR Code (Bottom Right)
         const qrSize = 75;
         const qrX = pageWidth - sideMargin - qrSize;
-        const qrY = footerY - 20;
+        const qrY = footerY - 30;
 
         doc.image(qrBuffer, qrX, qrY, { width: qrSize });
-        doc.fontSize(8).text('Scan to Verify', qrX, qrY + qrSize + 5, { width: qrSize, align: 'center' });
+        doc.fontSize(10).text('Scan to Verify', qrX, qrY + qrSize + 5, { width: qrSize, align: 'center' });
 
         doc.end(); 
     });
@@ -164,7 +164,7 @@ export const generateCertificate = asyncHandler(async (req, res) => {
     let result = await getResultForCertificate(resultId, req.user._id);
 
     const baseUrl = process.env.CLIENT_URL || `${req.protocol}://${req.get('host')}`;
-    const verificationUrl = `${baseUrl}/verify-certificate/${resultId}`; 
+    const verificationUrl = `${baseUrl}/certificates/${resultId}`; 
 
     const pdfBuffer = await generatePdfKitCertificate(result, verificationUrl);
 
