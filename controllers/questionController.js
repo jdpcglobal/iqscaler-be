@@ -9,42 +9,21 @@ import Result from '../models/resultModel.js';
 // @route   GET /api/questions
 // @access  Private/Admin
 const getQuestions = asyncHandler(async (req, res) => {
-  const questions = await Question.find({}).populate('user', 'username'); // Fetch all, populate the user info
+  const questions = await Question.find({}).populate('user', 'username'); 
   res.json(questions);
 });
 
-// @desc    Get all unique question categories
-// @route   GET /api/questions/categories
-// @access  Private/Admin (only admins need to see this list for the form)
+// @desc    Get all unique question categories
+// @route   GET /api/questions/categories
+// @access  Private/Admin
 const getQuestionCategories = asyncHandler(async (req, res) => {
-  // Use MongoDB aggregation to find all distinct category values
-  const categories = await Question.aggregate([
-    { 
-      // 1. Group all documents by the 'category' field
-      $group: {
-        _id: '$category', // Grouping key is the category value
-      }
-    },
-    {
-      // 2. Optionally, project/rename the output field and sort it alphabetically
-      $project: {
-        _id: 0, // Exclude the default _id field
-        category: '$_id', // Rename the grouped field to 'category'
-      }
-    },
-    {
-      // 3. Sort the results alphabetically
-      $sort: {
-        category: 1
-      }
-    }
-  ]);
-
-  // The result is an array of objects like: [{ category: 'Verbal' }, { category: 'Numerical' }]
-  // We can map it to an array of strings for simplicity on the frontend: ['Verbal', 'Numerical']
-  const categoryNames = categories.map(item => item.category);
-  
-  res.json(categoryNames);
+  const categories = await Question.aggregate([
+    { $group: { _id: '$category' } },
+    { $project: { _id: 0, category: '$_id' } },
+    { $sort: { category: 1 } }
+  ]);
+  const categoryNames = categories.map(item => item.category);
+  res.json(categoryNames);
 });
 
 // @desc    Create a new question (Admin function)
@@ -53,24 +32,27 @@ const getQuestionCategories = asyncHandler(async (req, res) => {
 const createQuestion = asyncHandler(async (req, res) => {
   const { text, imageUrl, options, correctAnswerIndex, difficulty, category } = req.body;
 
-  // Simple validation to ensure the correct answer index is valid for the options provided
   if (correctAnswerIndex === undefined || correctAnswerIndex >= options.length) {
     res.status(400);
     throw new Error('Invalid correct answer index for the provided options.');
   }
 
   const question = new Question({
-    user: req.user._id, // Set the creator (req.user is set by the 'protect' middleware)
+    user: req.user._id,
     text,
     imageUrl,
-    options: options.map(opt => ({ text: opt.text || opt })), // Map options to match the optionSchema
+    // Explicitly map text and imageUrl to match optionSchema
+    options: options.map(opt => ({ 
+        text: opt.text || '', 
+        imageUrl: opt.imageUrl || '' 
+    })),
     correctAnswerIndex,
     difficulty,
     category,
   });
 
   const createdQuestion = await question.save();
-  res.status(201).json(createdQuestion); // 201 Created
+  res.status(201).json(createdQuestion);
 });
 
 // @desc    Update a question (Admin function)
@@ -83,17 +65,19 @@ const updateQuestion = asyncHandler(async (req, res) => {
 
   if (question) {
     question.text = text || question.text;
-    question.imageUrl = imageUrl ?? question.imageUrl; // Use nullish coalescing for optional fields
+    question.imageUrl = imageUrl ?? question.imageUrl;
     question.difficulty = difficulty || question.difficulty;
     question.category = category || question.category;
 
-    // Update options and validate index if options are provided
     if (options && options.length >= 2) {
       if (correctAnswerIndex === undefined || correctAnswerIndex >= options.length) {
         res.status(400);
         throw new Error('Invalid correct answer index for the provided options during update.');
       }
-      question.options = options.map(opt => ({ text: opt.text || opt }));
+      question.options = options.map(opt => ({ 
+        text: opt.text || '', 
+        imageUrl: opt.imageUrl || '' 
+      }));
       question.correctAnswerIndex = correctAnswerIndex;
     }
 
@@ -110,7 +94,6 @@ const updateQuestion = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const deleteQuestion = asyncHandler(async (req, res) => {
   const question = await Question.findById(req.params.id);
-
   if (question) {
     await Question.deleteOne({ _id: question._id });
     res.json({ message: 'Question removed' });
@@ -120,147 +103,101 @@ const deleteQuestion = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get a controlled set of randomized questions for the test
+// @desc    Get randomized questions for test
 // @route   GET /api/questions/test
-// @access  Public
+// @access  Public/User
 const getTestQuestions = asyncHandler(async (req, res) => {
-  // 1. Fetch the global test configuration
   const config = await TestConfig.findOne({});
-
   if (!config) {
     res.status(500);
-    throw new Error('Test configuration not set. Contact administrator.');
+    throw new Error('Test configuration not set.');
   }
 
   let finalQuestions = [];
   let questionsToFetch = config.totalQuestions;
 
-  // 2. Iterate through the difficulty distribution and fetch questions for each group
   for (const dist of config.difficultyDistribution) {
     const { difficulty, count } = dist;
-
     if (count > 0) {
-      // Use $sample within a $match for controlled randomization
       const difficultyQuestions = await Question.aggregate([
         { $match: { difficulty: difficulty } },
-        { $sample: { size: count } }, // Select 'count' random questions of this difficulty
+        { $sample: { size: count } },
       ]);
-      
       finalQuestions.push(...difficultyQuestions);
-      questionsToFetch -= difficultyQuestions.length; // Decrement remaining total
+      questionsToFetch -= difficultyQuestions.length;
     }
   }
 
-  // 3. Handle remaining questions if the sum of difficulty counts was less than totalQuestions
-  // This logic fulfills your requirement: "if less the remaining questions should be selected at random"
   if (questionsToFetch > 0) {
-    const randomQuestions = await Question.aggregate([
-      // $match: Exclude questions already selected (complex, skip for MVP)
-      // For simplicity, we just fetch more random questions from the pool:
-      { $sample: { size: questionsToFetch } },
-    ]);
+    const randomQuestions = await Question.aggregate([{ $sample: { size: questionsToFetch } }]);
     finalQuestions.push(...randomQuestions);
   }
   
-  // 4. Final step: Exclude sensitive data (correctAnswerIndex)
-  const safeQuestions = finalQuestions.map(q => {
-    // Destructure to easily create a new object without the sensitive field
-    const { correctAnswerIndex, __v, ...safeQ } = q;
-    return safeQ;
-  });
+  // Explicitly construct the response object to ensure all image fields are present
+  // and sensitive data (correctAnswerIndex) is excluded.
+  const safeQuestions = finalQuestions.map(q => ({
+    _id: q._id,
+    text: q.text,
+    imageUrl: q.imageUrl || "", // Ensure this is explicitly passed
+    category: q.category,
+    difficulty: q.difficulty,
+    options: q.options.map(opt => ({
+        text: opt.text,
+        imageUrl: opt.imageUrl || ""
+    }))
+  }));
 
   if (safeQuestions.length > 0) {
     res.json(safeQuestions);
   } else {
     res.status(404);
-    throw new Error('Not enough questions available to start the test based on configuration.');
+    throw new Error('Not enough questions available.');
   }
 });
 
-// @desc    Submit user answers and calculate score
+// @desc    Submit user answers
 // @route   POST /api/questions/submit
-// @access  Private (User must be logged in)
+// @access  Private
 const submitTest = asyncHandler(async (req, res) => {
-  const { userAnswers, timeTakenSeconds } = req.body; // userAnswers is an array of { questionId, selectedIndex }
-  const userId = req.user._id; // Extracted from the token via protect middleware
+  const { userAnswers } = req.body;
+  const userId = req.user._id;
 
   if (!userAnswers || userAnswers.length === 0) {
     res.status(400);
     throw new Error('No answers submitted.');
   }
 
-  // 1. Fetch the full questions corresponding to the IDs submitted by the user
   const questionIds = userAnswers.map(a => a.questionId);
   const correctQuestions = await Question.find({ '_id': { $in: questionIds } });
 
-  // Map correct answers by ID for quick lookup
   const correctMap = new Map(
-    correctQuestions.map(q => [
-      q._id.toString(), 
-      { 
-        correctIndex: q.correctAnswerIndex, 
-        difficulty: q.difficulty 
-      }
-    ])
+    correctQuestions.map(q => [q._id.toString(), { correctIndex: q.correctAnswerIndex, difficulty: q.difficulty }])
   );
 
   let totalScore = 0;
   let correctCount = 0;
+  const breakdown = { easy: 0, medium: 0, hard: 0 };
+  const pointMap = { easy: 1, medium: 3, hard: 6 };
 
-  const breakdown = {
-    easy: 0,
-    medium: 0,
-    hard: 0,
-  };
-
-  // Define scoring based on your requirement
-  const pointMap = {
-    easy: 1,
-    medium: 3,
-    hard: 6,
-  };
-
-  // 2. Grade the user's answers
   for (const userAnswer of userAnswers) {
     const { questionId, selectedIndex } = userAnswer;
     const correctInfo = correctMap.get(questionId);
-
-    // If the question was found in the DB (it should be)
-    if (correctInfo) {
-      // Check if the user's selected answer matches the correct answer
-      if (parseInt(selectedIndex) === correctInfo.correctIndex) {
-        correctCount++;
-        
-        // Calculate score based on difficulty
-        const difficulty = correctInfo.difficulty;
-        const scoreToAdd = pointMap[difficulty] || 0; // Default to 0 if difficulty is missing
-        totalScore += scoreToAdd;
-
-        // Update the breakdown
-        if (breakdown[difficulty] !== undefined) {
-          breakdown[difficulty]++;
-        }
-      }
+    if (correctInfo && parseInt(selectedIndex) === correctInfo.correctIndex) {
+      correctCount++;
+      totalScore += (pointMap[correctInfo.difficulty] || 0);
+      breakdown[correctInfo.difficulty]++;
     }
   }
 
-  // 3. Save the result to the database
   const result = await Result.create({
     user: userId,
-    totalScore: totalScore,
+    totalScore,
     questionsAttempted: userAnswers.length,
     correctAnswers: correctCount,
     difficultyBreakdown: breakdown,
   });
 
-  // 4. Respond with the final result data
-  res.status(201).json({
-    message: 'Test submitted and scored successfully.',
-    totalScore,
-    correctAnswers: correctCount,
-    questionsAttempted: userAnswers.length,
-    resultId: result._id,
-  });
+  res.status(201).json({ totalScore, correctAnswers: correctCount, resultId: result._id });
 });
 
-export { getQuestions, createQuestion, updateQuestion, deleteQuestion, getTestQuestions, submitTest, getQuestionCategories};
+export { getQuestions, createQuestion, updateQuestion, deleteQuestion, getTestQuestions, submitTest, getQuestionCategories };

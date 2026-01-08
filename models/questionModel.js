@@ -6,7 +6,8 @@ import mongoose from 'mongoose';
 const optionSchema = mongoose.Schema({
   text: {
     type: String,
-    required: true,
+    required: false,
+    trim: true,
   },
   imageUrl: { 
     type: String,
@@ -33,7 +34,19 @@ const questionSchema = mongoose.Schema(
     options: {
       type: [optionSchema],
       required: true,
-      validate: [arrayLimit, 'A question must have between 2 and 6 options'],
+      // Updated validation: Ensure 2-6 options AND each option has either text or image
+      validate: [
+        {
+          validator: arrayLimit,
+          msg: 'A question must have between 2 and 6 options'
+        },
+        {
+          validator: function(options) {
+            return options.every(opt => (opt.text && opt.text.trim().length > 0) || (opt.imageUrl && opt.imageUrl.trim().length > 0));
+          },
+          msg: 'Each option must contain either text or an image.'
+        }
+      ],
     },
     // The zero-based index of the correct answer within the 'options' array
     correctAnswerIndex: {
