@@ -19,7 +19,7 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'iq-platform-questions', // A folder name in your Cloudinary account
-    allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'avif'],
     // Use the public_id for easy identification
     public_id: (req, file) => file.originalname.split('.')[0] + '-' + Date.now(),
   },
