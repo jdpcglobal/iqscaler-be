@@ -12,6 +12,7 @@ import resultRoutes from './routes/resultRoutes.js';
 import certificateRoutes from './routes/certificateRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
+import compression from 'compression'; // New IMPORT COMPRESSION
 
 // Load environment variables from .env file
 dotenv.config();
@@ -23,6 +24,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+app.use(compression()); // NEW USE COMPRESSION
 app.use(express.json()); // For parsing application/json
 app.use(cors()); // Enable CORS for all routes
 
