@@ -27,7 +27,7 @@ const __dirname = path.dirname(__filename);
     if (p >= 16) return "80 - 89 (Below Average)";
     return "Below 80 (Low)";
 };*/
-function percentileToIQ(percentile) {
+function getIQRange(percentile) {
     // Clamp percentile to avoid infinity
     let p = Math.min(Math.max(percentile / 100, 0.0001), 0.9999);
 
