@@ -172,29 +172,29 @@ const generatePdfKitCertificate = async (result, verificationUrl) => {
             .font('Helvetica-Bold')
             .text(userName, 0, currentY, { align: 'center', width: pageWidth });
         
-        currentY += 60;
+        currentY += 55;
         doc.fillColor('#444')
-            .fontSize(24)
+            .fontSize(22)
             .font('Helvetica')
-            .text('has successfully completed the IQScaler cognitive assessment, consisting of analytical, logical, and general reasoning questions and is hereby awarded a score of:', 0, currentY, { align: 'center', width: pageWidth });
+            .text('has completed the IQScaler cognitive assessment, consisting of analytical, logical, and general reasoning questions and is hereby awarded a score of:', 0, currentY, { align: 'center', width: pageWidth-10 });
             
         currentY += 60;
         doc.fillColor('#28a745')
-            .fontSize(38)
+            .fontSize(35)
             .font('Times-Bold')
             .text(`${scorePercentage}%`, 0, currentY, { align: 'center', width: pageWidth });
 
-        currentY += 55;
+        currentY += 45;
         doc.fillColor('#555')
             .fontSize(20)
             .font('Helvetica-Oblique')
             .text(`Assessed IQ Score: ${iqRange}`, 0, currentY, { align: 'center', width: pageWidth });
 
-        currentY += 50;
+        currentY += 60;
         doc.fillColor('#555')
-            .fontSize(15)
+            .fontSize(13)
             .font('Helvetica-Oblique')
-            .text(`This score is derived from the individual’s performance relative to a standardized scoring model based on general population benchmarks.`, 0, currentY, { align: 'center', width: pageWidth });
+            .text(`This score is derived from the individual’s performance relative to a standardized scoring model based on general population benchmarks.`, 0, currentY, { align: 'center', width: pageWidth-10 });
 
         // --- 4. Footer Section ---
         const footerY = pageHeight - 110; 
@@ -204,7 +204,7 @@ const generatePdfKitCertificate = async (result, verificationUrl) => {
         doc.fillColor('#555').fontSize(15).font('Helvetica')
             .text(`Issued by: IQScaler`, sideMargin, footerY )
             .text(`Certificate ID: ${certificateNumber}`, sideMargin, footerY + 15)
-            .text(`Date: ${testDate}`, sideMargin, footerY + 15);
+            .text(`Date: ${testDate}`, sideMargin, footerY + 30);
 
         // Website Logo (Center Bottom)
         const logoSize = 75;
