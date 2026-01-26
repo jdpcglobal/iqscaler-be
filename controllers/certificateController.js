@@ -176,7 +176,7 @@ const generatePdfKitCertificate = async (result, verificationUrl) => {
         doc.fillColor('#444')
             .fontSize(22)
             .font('Helvetica')
-            .text('has completed the IQScaler cognitive assessment, consisting of analytical, logical, and general reasoning questions and is hereby awarded a score of:', 0, currentY, { align: 'center', width: pageWidth-20 });
+            .text('has completed the IQScaler cognitive assessment, consisting of analytical, logical, and general reasoning questions and is hereby awarded a score of:', 20, currentY, { align: 'center', width: pageWidth-10 });
             
         currentY += 60;
         doc.fillColor('#28a745')
@@ -203,8 +203,8 @@ const generatePdfKitCertificate = async (result, verificationUrl) => {
         // Metadata
         doc.fillColor('#555').fontSize(15).font('Helvetica')
             .text(`Issued by: IQScaler`, sideMargin, footerY )
-            .text(`Certificate ID: ${certificateNumber}`, sideMargin, footerY + 15)
-            .text(`Date: ${testDate}`, sideMargin, footerY + 30);
+            .text(`Certificate ID: ${certificateNumber}`, sideMargin, footerY + 20)
+            .text(`Date: ${testDate}`, sideMargin, footerY + 40);
 
         // Website Logo (Center Bottom)
         const logoSize = 75;
