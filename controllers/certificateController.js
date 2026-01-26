@@ -157,7 +157,7 @@ const generatePdfKitCertificate = async (result, verificationUrl) => {
 
         doc.fillColor('#0056b3')
             .fontSize(32)
-            .font('Garamond')
+            .font('Helvetica-Bold')
             .text('CERTIFICATE OF COGNITIVE ASSESSMENT', 0, currentY, { align: 'center', width: pageWidth });
 
         currentY += 55;
