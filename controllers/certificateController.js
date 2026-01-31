@@ -235,7 +235,7 @@ export const generateCertificate = asyncHandler(async (req, res) => {
     let result = await getResultForCertificate(resultId, req.user._id);
 
     const baseUrl = process.env.CLIENT_URL || `${req.protocol}://${req.get('host')}`;
-    const verificationUrl = `${baseUrl}/certificates/${resultId}`; 
+    const verificationUrl = `${baseUrl}/verify-certificate/${resultId}`; 
 
     const pdfBuffer = await generatePdfKitCertificate(result, verificationUrl);
 
