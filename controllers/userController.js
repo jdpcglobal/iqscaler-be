@@ -42,11 +42,14 @@ const googleAuth = asyncHandler(async (req, res) => {
   } else {
     // 2. If user doesn't exist, create them
     // Generating a unique username from the name
-    const baseUsername = name.replace(/\s+/g, '').toLowerCase();
-    const uniqueUsername = `${baseUsername}${Math.floor(1000 + Math.random() * 9000)}`;
+      const baseUsername = name
+      .trim()
+      .split(/\s+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
 
     user = await User.create({
-      username: uniqueUsername,
+      username: baseUsername,
       email,
       googleId,
       // No password needed because of our schema modification
@@ -66,7 +69,18 @@ const googleAuth = asyncHandler(async (req, res) => {
 // @route   POST /api/users
 // @access  Public
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
+  // const { username, email, password } = req.body;
+  let { username, email, password } = req.body;
+  // --- NEW: Format the username ---
+  // If username exists, format it to Title Case with single spaces
+  if (username) {
+    username = username
+      .trim()
+      .split(/\s+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+  // --------------------------------
 
   // 1. Check if user already exists
   const userExists = await User.findOne({ email });
