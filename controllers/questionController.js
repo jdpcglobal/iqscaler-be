@@ -103,57 +103,7 @@ const deleteQuestion = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get randomized questions for test
-// @route   GET /api/questions/test
-// @access  Public/User
-// const getTestQuestions = asyncHandler(async (req, res) => {
-//   const config = await TestConfig.findOne({});
-//   if (!config) {
-//     res.status(500);
-//     throw new Error('Test configuration not set.');
-//   }
-
-//   let finalQuestions = [];
-//   let questionsToFetch = config.totalQuestions;
-
-//   for (const dist of config.difficultyDistribution) {
-//     const { difficulty, count } = dist;
-//     if (count > 0) {
-//       const difficultyQuestions = await Question.aggregate([
-//         { $match: { difficulty: difficulty } },
-//         { $sample: { size: count } },
-//       ]);
-//       finalQuestions.push(...difficultyQuestions);
-//       questionsToFetch -= difficultyQuestions.length;
-//     }
-//   }
-
-//   if (questionsToFetch > 0) {
-//     const randomQuestions = await Question.aggregate([{ $sample: { size: questionsToFetch } }]);
-//     finalQuestions.push(...randomQuestions);
-//   }
-  
-//   // Explicitly construct the response object to ensure all image fields are present
-//   // and sensitive data (correctAnswerIndex) is excluded.
-//   const safeQuestions = finalQuestions.map(q => ({
-//     _id: q._id,
-//     text: q.text,
-//     imageUrl: q.imageUrl || "", // Ensure this is explicitly passed
-//     category: q.category,
-//     difficulty: q.difficulty,
-//     options: q.options.map(opt => ({
-//         text: opt.text,
-//         imageUrl: opt.imageUrl || ""
-//     }))
-//   }));
-
-//   if (safeQuestions.length > 0) {
-//     res.json(safeQuestions);
-//   } else {
-//     res.status(404);
-//     throw new Error('Not enough questions available.');
-//   }
-// });
+// @desc    Get questions for a test based on configuration
 const getTestQuestions = asyncHandler(async (req, res) => {
   const config = await TestConfig.findOne({});
   if (!config) {
