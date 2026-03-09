@@ -4,6 +4,7 @@ import asyncHandler from 'express-async-handler';
 import Question from '../models/questionModel.js';
 import TestConfig from '../models/testConfigModel.js';
 import Result from '../models/resultModel.js';
+import { getIQRange } from '../utils/iqCalculator.js';
 
 // @desc    Get all questions (Admin function)
 // @route   GET /api/questions
@@ -194,9 +195,29 @@ const submitTest = asyncHandler(async (req, res) => {
     }
   }
 
+  // --- YOUR CALIBRATION LOGIC ---
+  const MEAN_SCORE = 15; 
+  const STANDARD_DEVIATION = 5; 
+
+  function calculatePercentile(rawScore, mean, sd) {
+    let z = (rawScore - mean) / sd;
+    let t = 1 / (1 + 0.2316419 * Math.abs(z));
+    let d = 0.3989423 * Math.exp(-z * z / 2);
+    let probability = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+    if (z > 0) probability = 1 - probability;
+    return probability * 100; 
+  }
+
+  const truePercentile = calculatePercentile(correctCount, MEAN_SCORE, STANDARD_DEVIATION);
+  const calculatedIq = getIQRange(truePercentile); // Returns the raw number now
+  // ------------------------------
+
   const result = await Result.create({
     user: userId,
     totalScore,
+    // iqScore: calculatedIq, // Store the calculated IQ score
+    // FIX: Safely extract just the number if it's an object!
+    iqScore: calculatedIq.score !== undefined ? calculatedIq.score : calculatedIq,
     questionsAttempted: userAnswers.length,
     correctAnswers: correctCount,
     difficultyBreakdown: breakdown,

@@ -9,7 +9,8 @@ import {
   getPaymentHistory,
   getCertificatePrice,
   createStripeSession,  // <-- Imported new Stripe function
-  verifyStripePayment   // <-- Imported new Stripe function
+  verifyStripePayment,   // <-- Imported new Stripe function
+  getMyPayments
 } from '../controllers/paymentController.js';
 
 const router = express.Router();
@@ -25,6 +26,9 @@ router.route('/fail').put(protect, updatePaymentToFailed);
 // --- STRIPE ROUTES (USD) ---
 router.route('/create-stripe-session').post(protect, createStripeSession);
 router.route('/verify-stripe').post(protect, verifyStripePayment);
+
+// --- USER ROUTES ---
+router.route('/my-history').get(protect, getMyPayments);
 
 // --- ADMIN ROUTES ---
 router.route('/history').get(protect, admin, getPaymentHistory); 

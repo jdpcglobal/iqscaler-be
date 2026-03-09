@@ -33,6 +33,14 @@ const paymentSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
+    // --- NEW FIELDS FOR GATEWAY DATA ---
+    actualAmount: {
+      type: Number,
+    },
+    actualCurrency: {
+      type: String,
+    },
+    // -----------------------------------
     status: {
       type: String,
       required: true,

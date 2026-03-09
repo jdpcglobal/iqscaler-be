@@ -14,6 +14,11 @@ const resultSchema = mongoose.Schema(
       required: true,
       default: 0,
     },
+    // --- NEW FIELD FOR IQ SCORE ---
+    iqScore: {
+      type: Number,
+      default: null, // Default is null until calculated
+    },
     // You can store the raw answers/questions taken for review purposes if needed
     // We'll keep it simple for now and just store the final calculated metrics.
     questionsAttempted: {
