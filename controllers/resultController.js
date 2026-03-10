@@ -56,18 +56,18 @@ const getAllResults = asyncHandler(async (req, res) => {
   res.json(results);
 });
 
-// // Main function to get the leaderboard results, commented for not will be uncommented in future
+// // Main function to get the leaderboard results, commented for now and will be uncommented in future
+
 // // @desc    Get top users by IQ Score (Purchased only)
 // // @route   GET /api/results/leaderboard
 // // @access  Public
 // const getLeaderboardResults = asyncHandler(async (req, res) => {
-//   // Support dynamic limits (e.g., ?limit=5 for homepage, ?limit=100 for leaderboard page)
 //   const limit = parseInt(req.query.limit) || 100;
 
 //   const leaderboard = await Result.aggregate([
 //     // 1. MUST be purchased and have a valid IQ
-//     { $match: { certificatePurchased: false, iqScore: { $ne: null } } },
-//     // 2. Sort by highest IQ first, then oldest date (tie-breaker)
+//     { $match: { certificatePurchased: true, iqScore: { $ne: null } } },
+//     // 2. Sort by highest IQ first, then oldest date
 //     { $sort: { iqScore: -1, createdAt: 1 } },
 //     // 3. Group by user to only get their single best score
 //     {
@@ -77,8 +77,8 @@ const getAllResults = asyncHandler(async (req, res) => {
 //         testDate: { $first: '$createdAt' }
 //       }
 //     },
-//     // 4. Re-sort the unique users
-//     { $sort: { iqScore: -1 } },
+//     // 4. Re-sort the unique users WITH THE TIE-BREAKER
+//     { $sort: { iqScore: -1, testDate: 1 } }, 
 //     { $limit: limit },
 //     // 5. Join to get the username
 //     {
@@ -105,7 +105,66 @@ const getAllResults = asyncHandler(async (req, res) => {
 //   res.json(leaderboard);
 // });
 
+
+// // @desc    Get logged in user's virtual or actual rank
+// // @route   GET /api/results/my-rank
+// // @access  Private
+// const getMyLeaderboardRank = asyncHandler(async (req, res) => {
+//   const userId = req.user._id;
+
+//   // 1. Find this user's absolute best result
+//   const bestResult = await Result.findOne({ user: userId, iqScore: { $ne: null } })
+//     .sort({ iqScore: -1 });
+
+//   if (!bestResult) {
+//     return res.json({ hasTakenTest: false });
+//   }
+
+//   const { iqScore, certificatePurchased, createdAt } = bestResult;
+
+//   // 2. Get the unique, grouped list of ONLY purchased scores
+//   const purchasedLeaderboard = await Result.aggregate([
+//     { $match: { certificatePurchased: true, iqScore: { $ne: null } } },
+//     { $sort: { iqScore: -1, createdAt: 1 } },
+//     {
+//       $group: {
+//         _id: '$user',
+//         iqScore: { $first: '$iqScore' },
+//         testDate: { $first: '$createdAt' }
+//       }
+//     }
+//   ]);
+
+//   // 3. Calculate Virtual/Actual Rank with Tie-Breaker Logic
+//   let rank = 1;
+//   for (const entry of purchasedLeaderboard) {
+//     // Don't compare the user against their own purchased record
+//     if (entry._id.toString() === userId.toString()) continue;
+
+//     // Rank drops by 1 if someone has a higher IQ
+//     if (entry.iqScore > iqScore) {
+//       rank++;
+//     } 
+//     // Rank also drops by 1 if someone has the SAME IQ, but took the test EARLIER (Tie-breaker)
+//     else if (entry.iqScore === iqScore && new Date(entry.testDate) < new Date(createdAt)) {
+//       rank++;
+//     }
+//   }
+
+//   res.json({
+//     hasTakenTest: true,
+//     certificatePurchased,
+//     rank, // This acts as actual rank if purchased, or virtual rank if not!
+    
+//     // SECURITY: Mask IQ if they haven't purchased it!
+//     bestIqScore: certificatePurchased ? iqScore : null 
+//   });
+// });
+
+
+
 // TEMPORARY LEADERBOARD: Shows everyone with valid IQs, regardless of purchase. This is for testing and will be removed in Phase 2 when we enforce the purchase requirement again.
+
 // @desc    Get top users by IQ Score (TEMPORARY: Shows everyone)
 // @route   GET /api/results/leaderboard
 // @access  Public
@@ -113,9 +172,7 @@ const getLeaderboardResults = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 100;
 
   const leaderboard = await Result.aggregate([
-    // TEMPORARY: Removed certificatePurchased check. Just requires a valid IQ.
     { $match: { iqScore: { $ne: null } } },
-    
     { $sort: { iqScore: -1, createdAt: 1 } },
     {
       $group: {
@@ -124,7 +181,9 @@ const getLeaderboardResults = asyncHandler(async (req, res) => {
         testDate: { $first: '$createdAt' }
       }
     },
-    { $sort: { iqScore: -1 } },
+    // FIX (Bug 2): Added testDate: 1 as a tie-breaker! 
+    // If IQ is the same, whoever took the test earliest wins the tie.
+    { $sort: { iqScore: -1, testDate: 1 } }, 
     { $limit: limit },
     {
       $lookup: {
@@ -155,30 +214,44 @@ const getLeaderboardResults = asyncHandler(async (req, res) => {
 const getMyLeaderboardRank = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
-  // Find this user's absolute best result
-  const bestResult = await Result.findOne({ user: userId })
+  // 1. Check if the user has a valid result
+  const bestResult = await Result.findOne({ user: userId, iqScore: { $ne: null } })
     .sort({ iqScore: -1 });
 
-  if (!bestResult || !bestResult.iqScore) {
+  if (!bestResult) {
     return res.json({ hasTakenTest: false });
   }
 
   const { iqScore, certificatePurchased } = bestResult;
 
-  // Calculate rank: How many unique purchased users have a HIGHER score than this user?
-  const higherScores = await Result.aggregate([
-    { $match: { certificatePurchased: true, iqScore: { $gt: iqScore } } },
-    { $group: { _id: '$user' } } // Group ensures we count unique users, not duplicate tests
+  // 2. Generate the exact same sorted list as the Global Leaderboard
+  // (This ensures tie-breakers are handled identically)
+  const leaderboard = await Result.aggregate([
+    { $match: { iqScore: { $ne: null } } },
+    { $sort: { iqScore: -1, createdAt: 1 } },
+    {
+      $group: {
+        _id: '$user',
+        iqScore: { $first: '$iqScore' },
+        testDate: { $first: '$createdAt' }
+      }
+    },
+    // The all-important tie-breaker!
+    { $sort: { iqScore: -1, testDate: 1 } } 
   ]);
 
-  const rank = higherScores.length + 1;
+  // 3. Find the exact position of the logged-in user in the official sorted list
+  const rankIndex = leaderboard.findIndex(
+    (entry) => entry._id.toString() === userId.toString()
+  );
+
+  const rank = rankIndex !== -1 ? rankIndex + 1 : null;
 
   res.json({
     hasTakenTest: true,
     certificatePurchased,
-    rank, // This acts as actual rank if purchased, or virtual rank if not!
-    // Mask IQ if not purchased!
-    bestIqScore: certificatePurchased ? iqScore : null 
+    rank, 
+    bestIqScore: iqScore 
   });
 });
 
