@@ -1,25 +1,29 @@
-// server/routes/resultRoutes.js
-
 import express from 'express';
 const router = express.Router();
-// Import the new controller function
-import { getResultById, getMyResults, getAllResults, getLeaderboardResults } from '../controllers/resultController.js'; 
+
+import { 
+  getResultById, 
+  getMyResults, 
+  getAllResults, 
+  getLeaderboardResults,
+  getMyLeaderboardRank
+} from '../controllers/resultController.js'; 
 import { protect, admin } from '../middleware/authMiddleware.js';
 
-// @route   GET /api/results/leaderboard
-// @access  Public
+// Public Leaderboard
 router.get('/leaderboard', getLeaderboardResults);
 
-// Public/Admin Routes
+// --- NEW ROUTE: Get logged-in user's rank ---
+router.route('/my-rank').get(protect, getMyLeaderboardRank); 
+// --------------------------------------------
+
 router.route('/')
-  .get(protect, admin, getAllResults); // Admin: Get all results
+  .get(protect, admin, getAllResults); 
 
-// User Routes
 router.route('/myresults')
-  .get(protect, getMyResults); // User: Get own result history
+  .get(protect, getMyResults); 
 
-// General Route (Protected for single result)
 router.route('/:id')
-  .get(protect, getResultById); // User/Admin: Get specific result
+  .get(protect, getResultById); 
 
 export default router;
