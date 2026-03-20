@@ -196,8 +196,8 @@ const submitTest = asyncHandler(async (req, res) => {
   }
 
   // --- YOUR CALIBRATION LOGIC ---
-  const MEAN_SCORE = 15; 
-  const STANDARD_DEVIATION = 5; 
+  const MEAN_SCORE = 25; 
+  const STANDARD_DEVIATION = 7.5; 
 
   function calculatePercentile(rawScore, mean, sd) {
     let z = (rawScore - mean) / sd;
@@ -208,7 +208,7 @@ const submitTest = asyncHandler(async (req, res) => {
     return probability * 100; 
   }
 
-  const truePercentile = calculatePercentile(correctCount, MEAN_SCORE, STANDARD_DEVIATION);
+  const truePercentile = calculatePercentile(totalScore, MEAN_SCORE, STANDARD_DEVIATION);
   const calculatedIq = getIQRange(truePercentile); // Returns the raw number now
   // ------------------------------
 
