@@ -4,7 +4,7 @@ import asyncHandler from 'express-async-handler';
 import jwt from 'jsonwebtoken';
 import User from '../models/userModel.js';
 import crypto from 'crypto';
-import { sendEmail } from '../utils/emailUtils.js';
+import { sendTransactionalEmail  } from '../utils/emailUtils.js';
 import { OAuth2Client } from 'google-auth-library';
 
 // Helper function to generate a JWT
@@ -162,7 +162,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   try {
     // 3. Send the email (using the utility we create next)
-    await sendEmail({
+    await sendTransactionalEmail ({
       to: user.email,
       subject: 'IQ Test Platform Password Reset Token',
       text: message,

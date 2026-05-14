@@ -5,6 +5,8 @@ import Question from '../models/questionModel.js';
 import TestConfig from '../models/testConfigModel.js';
 import Result from '../models/resultModel.js';
 import { getIQRange } from '../utils/iqCalculator.js';
+import { sendResultEmail } from '../utils/emailUtils.js';
+import { getResultEmailTemplate } from '../utils/emailTemplates.js';
 
 // @desc    Get all questions (Admin function)
 // @route   GET /api/questions
@@ -223,7 +225,27 @@ const submitTest = asyncHandler(async (req, res) => {
     difficultyBreakdown: breakdown,
   });
 
+  // Send result email — fire-and-forget (we don't await so it never blocks
+    // the HTTP response if the mail server is slow or down).
+    // ─────────────────────────────────────────────────────────────────────────
+    const clientUrl = process.env.CLIENT_URL || 'https://www.iqscaler.com';
+ 
+    sendResultEmail(
+        req.user.email,
+        `Your IQ Scaler Results — Score: ${totalScore}`,
+        getResultEmailTemplate({
+            username: req.user.username,
+            totalScore,
+            correctAnswers: correctCount,
+            questionsAttempted: userAnswers.length,
+            iqScore: result.iqScore,
+            difficultyBreakdown: breakdown,
+            resultId: result._id.toString(),
+            clientUrl,
+        }),
+    );
+
   res.status(201).json({ totalScore, correctAnswers: correctCount, resultId: result._id });
 });
 
-export { getQuestions, createQuestion, updateQuestion, deleteQuestion, getTestQuestions, submitTest, getQuestionCategories };
+export { getQuestions, createQuestion, updateQuestion, deleteQuestion, getTestQuestions, submitTest, getQuestionCategories };// // server/controllers/questionController.js

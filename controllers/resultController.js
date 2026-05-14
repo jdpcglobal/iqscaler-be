@@ -56,6 +56,23 @@ const getAllResults = asyncHandler(async (req, res) => {
   res.json(results);
 });
 
+// @desc    Get all results for a specific user (Admin only)
+// @route   GET /api/results/user/:userId
+// @access  Private/Admin
+const getUserResultsByAdmin = asyncHandler(async (req, res) => {
+  const results = await Result
+    .find({ user: req.params.userId })
+    .sort({ createdAt: -1 });
+ 
+  if (!results) {
+    res.status(404);
+    throw new Error('No results found for this user.');
+  }
+ 
+  // Admins see full unmasked data including IQ scores regardless of purchase status
+  res.json(results);
+});
+
 // // Main function to get the leaderboard results, commented for now and will be uncommented in future
 
 // // @desc    Get top users by IQ Score (Purchased only)
@@ -260,5 +277,6 @@ export {
   getMyResults, 
   getAllResults, 
   getLeaderboardResults,
-  getMyLeaderboardRank
+  getMyLeaderboardRank,
+  getUserResultsByAdmin
 };
